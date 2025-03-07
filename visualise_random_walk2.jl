@@ -58,3 +58,4 @@ scatter!(axbottom, myt, mymsd,  markersize = 8, color = :red )
 display(fig)
 
 #mysol=getsol(0.02, 1.7)
+#testing a random change for git puurposes
