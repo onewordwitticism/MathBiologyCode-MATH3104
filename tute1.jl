@@ -156,7 +156,6 @@ function main()
     # solve_basic_ODE_explicit_q2(t0, tn, n, y0, tau, ybar)
     # solve_basic_ODE_implicit_q2(t0, tn, n, y0, tau, ybar)
 
-
     solve_basic_ODE_chatgpt(t0, tn, n, y0, tau, ybar)
 
 end
