@@ -1,11 +1,11 @@
 using CairoMakie
 
 function question1()
-    km = 0.2  # k1_act
-    kd = 0.1  # k1_deact
+    km = 0.02  # k1_act
+    kd = 0.01  # k1_deact
 
-    kn = 0.1  # k2_act
-    kr = 0.2  # k2_deact
+    kn = 0.01  # k2_act
+    kr = 0.02  # k2_deact
 
     tol=1e-10
     maxiter=30
@@ -51,6 +51,10 @@ function question1()
     clims = (0.0, 1.0)         # 0 = blue, 1 = yellow
 
     fig = Figure(resolution = (1050, 400))
+
+    Label(fig[0, 1:3], "Saturated-constant regime  (Kₘ = 0.02, K_d = 0.01, Kₙ = 0.01, K_r = 0.02)",
+      fontsize = 18, padding = (0,0,10,0), halign = :center)
+
     ax1 = Axis(fig[1,1], title = "P₁ steady state", xlabel = "S₁", ylabel = "S₂")
     ax2 = Axis(fig[1,2], title = "P₂ steady state", xlabel = "S₁", ylabel = "S₂")
     
@@ -58,7 +62,7 @@ function question1()
     h2 = heatmap!(ax2, S1_vals, S2_vals, P2_grid; colormap = :viridis, colorrange = clims)
     
     Colorbar(fig[1,3], h1, label = "fraction", width = 15)   
-    save("assignment5_q1_unsaturated.png", fig)  
+    save("assignment5_q1_saturated.png", fig)  
     fig
 
 end
