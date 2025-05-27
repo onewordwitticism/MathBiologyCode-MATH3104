@@ -20,7 +20,7 @@ function question1()
     u0 = [8, 5, 15, 15, 25, 6]
     tspan = (0.0, 1000)
 
-    S_values = 0.1:0.1:1.0 .* 60  # transcripts/min - originally 0.5 was in transcripts/second !!
+    S_values = 0.1:0.1:3.0 .* 60  # transcripts/min - originally 0.5 was in transcripts/second !!
     TFA_ss = Float64[]; TFB_ss = Float64[]; TFC_ss = Float64[]
     A_ss = Float64[]; B_ss = Float64[]; C_ss = Float64[]
 
@@ -36,8 +36,8 @@ function question1()
             du[6] = (alpha) * C - k_p * TFC
         end
 
-        prob = ODEProblem(odes!, u0, tspan)
-        sol = solve(prob, Tsit5())
+        prob = ODEProblem(odes!, u0, tspan)  ### closest thing in Julia to ode45() in matlab
+        sol = solve(prob, Tsit5())  ### closest thing in Julia to ode45() in matlab
 
         # Plot protein vs time if S == 0.5 * 60 (i.e. original value)
         if S == 0.5 * 60
@@ -53,7 +53,7 @@ function question1()
                 lw = 2,
                 title = "Protein Concentrations vs Time (S = 0.5)")
 
-            display(p_time)  # show in a separate window
+            display(p_time)  
             savefig(p_time, "protein_vs_time_S_0.5_QuestionA.png")
         end
 
@@ -66,8 +66,6 @@ function question1()
         push!(TFC_ss, sol[6, end])
     end
 
-    # Plot proteins vs S
-    # Plot steady-state protein concentrations
     p1 = plot(S_values, [TFA_ss, TFB_ss, TFC_ss],
         label = ["TFA" "TFB" "TFC"],
         xlabel = "S (max transcription rate)",
@@ -88,7 +86,6 @@ function question1()
     vline!(p1, [0.5 * 60], linestyle = :dash, color = :black, label = "")
     vline!(p2, [0.5 * 60], linestyle = :dash, color = :black, label = "")
 
-    # Combine both plots vertically
     plot(p1, p2, layout = (2,1), size = (800, 800))
     full_plot = plot(p1, p2, layout = (2,1), size = (800, 800))
     savefig(full_plot, "protein_mrna_vs_S_fullrange_QuestionA.png")
@@ -96,7 +93,6 @@ function question1()
     mask = S_values .<= 20
     max_zoom = maximum(vcat(TFA_ss[mask], TFB_ss[mask], TFC_ss[mask]))
 
-    # Zoomed-in plots for S from 0 to 20
     p3 = plot(S_values, [TFA_ss, TFB_ss, TFC_ss],
         label = ["TFA" "TFB" "TFC"],
         xlabel = "S (max transcription rate)",
@@ -130,61 +126,77 @@ function question2()
     avg_protein_t = 100
     trans_efficiency = 10
     tmax = 1000
-    P = Float64[]
-    M = Float64[]
-    T = Float64[]
 
-    k_mrna = log(2) / avg_mrna_t  # deg rate for mrna's
-    k_p = log(2) / avg_protein_t  # deg rate for proteins
-    alpha = trans_efficiency / avg_mrna_t  # 10 proteins per min*mrna
+    num_realizations = 10
+    all_T = Vector{Vector{Float64}}()
+    all_M = Vector{Vector{Float64}}()
+    all_P = Vector{Vector{Float64}}()
 
-    # set IC
-    push!(P, 1)
-    push!(M, 10)
-    push!(T, 0)
+    for run in 1:num_realizations
+        P = Float64[]
+        M = Float64[]
+        T = Float64[]
 
-    while T[end] < tmax
-        v1 =  S0 * (K^n / (K^n + P[end]^n))  # repression by P
-        v2 = k_mrna * M[end]
-        v3 = alpha * M[end]
-        v4 = k_p * P[end]
+        k_mrna = log(2) / avg_mrna_t  # deg rate for mrna's
+        k_p = log(2) / avg_protein_t  # deg rate for proteins
+        alpha = trans_efficiency / avg_mrna_t  # 10 proteins per min*mrna
 
-        total_flux = v1 + v2 + v3 + v4  # total probability/time that one reaction occurs out of our set of reactions
-        tau = -log(rand()) / total_flux  # this is the exponential waiting time; we sample and get a time tau
-        event = rand()
-        scaled_event = event * total_flux  # scale the event to the total flux
+        # set IC
+        push!(P, 1)
+        push!(M, 10)
+        push!(T, 0)
 
-        # note this if loop stuff only works because its checking in order.  Otherwise the logic would break.
-        if scaled_event < v1  # mrna synthesis
-            push!(M, M[end] + 1)
-            push!(P, P[end])
-        elseif scaled_event < v1 + v2  # mrna degradation
-            push!(M, M[end] - 1)
-            push!(P, P[end])
-        elseif scaled_event < v1 + v2 + v3  # protein synthesis
-            push!(M, M[end])
-            push!(P, P[end] + 1)
-        else  # protein degradation
-            push!(M, M[end])
-            push!(P, P[end] - 1)
+        while T[end] < tmax
+            v1 =  S0 * (K^n / (K^n + P[end]^n))  # repression by P
+            v2 = k_mrna * M[end]
+            v3 = alpha * M[end]
+            v4 = k_p * P[end]
+
+            total_flux = v1 + v2 + v3 + v4  # total probability/time that one reaction occurs out of our set of reactions
+            tau = -log(rand()) / total_flux  # this is the exponential waiting time; we sample and get a time tau
+            event = rand()
+            scaled_event = event * total_flux  # scale the event to the total flux
+
+            # note this if loop stuff only works because its checking in order.  Otherwise the logic would break.
+            if scaled_event < v1  # mrna synthesis
+                push!(M, M[end] + 1)
+                push!(P, P[end])
+            elseif scaled_event < v1 + v2  # mrna degradation
+                push!(M, M[end] - 1)
+                push!(P, P[end])
+            elseif scaled_event < v1 + v2 + v3  # protein synthesis
+                push!(M, M[end])
+                push!(P, P[end] + 1)
+            else  # protein degradation
+                push!(M, M[end])
+                push!(P, P[end] - 1)
+            end
+
+            push!(T, T[end] + tau)
         end
 
-        push!(T, T[end] + tau)
-
+        push!(all_T, T)
+        push!(all_M, M)
+        push!(all_P, P)
     end
 
-    # Plot the results
-    p1 = plot(T, P,
+    p1 = plot(all_T[1], all_P[1],
         label = "Protein",
         xlabel = "Time",
         ylabel = "Molecule Count",
         title = "Negative Autoregulation: Protein and mRNA vs Time",
-        lw = 2)
+        lw = 1.5)
 
-    plot!(T, M, label = "mRNA", lw = 2, ls = :dash)
+    plot!(all_T[1], all_M[1], label = "mRNA", lw = 1.5, ls = :dash)
+
+    for i in 2:num_realizations
+        plot!(all_T[i], all_P[i], label = "", lw = 1.5)
+        plot!(all_T[i], all_M[i], label = "", lw = 1.5, ls = :dash)
+    end
+
     savefig(p1, "negative_autoregulation_protein_mrna_vs_time_QuestionB.png")
-
 end
+
 
 function noise_given_lifetime(lifetime)
     avg_protein_t = lifetime
@@ -196,8 +208,8 @@ function noise_given_lifetime(lifetime)
     trans_efficiency = 10
     tmax = 100000
 
-    k_mrna = log(2) / avg_mrna_t  # deg rate for mrna's
-    k_p = log(2) / avg_protein_t  # deg rate for proteins
+    k_mrna = log(2) / avg_mrna_t  
+    k_p = log(2) / avg_protein_t  
     alpha = trans_efficiency / avg_mrna_t  # 10 proteins per min*mrna
 
     P = [1.0]
@@ -241,20 +253,20 @@ function main()
     # question1()
     question2()
 
-    # last part of q2
-    lifetimes = [10, 100, 1000]
-    noises = [noise_given_lifetime(L) for L in lifetimes]
+    # # last part of q2
+    # lifetimes = [10, 100, 1000]
+    # noises = [noise_given_lifetime(L) for L in lifetimes]
 
-    # Plot the noise vs protein lifetime
-    p2 = plot(lifetimes, noises,
-        xscale = :log10,
-        xlabel = "Protein Lifetime",
-        ylabel = "Noise (σ / μ)",
-        title = "Noise vs Protein Lifetime",
-        marker = :o,
-        lw = 2,
-        legend = false)
-    savefig(p2, "noise_vs_protein_lifetime_QuestionB.png")
+    # # Plot the noise vs protein lifetime
+    # p2 = plot(lifetimes, noises,
+    #     xscale = :log10,
+    #     xlabel = "Protein Lifetime",
+    #     ylabel = "Noise (σ / μ)",
+    #     title = "Noise vs Protein Lifetime",
+    #     marker = :o,
+    #     lw = 2,
+    #     legend = false)
+    # savefig(p2, "noise_vs_protein_lifetime_QuestionB.png")
 end
 
 main()
